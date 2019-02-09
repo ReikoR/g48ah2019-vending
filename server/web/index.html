@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="fetch.umd.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            padding: 0;
+            margin: 0;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+
+        #cart {
+            /*display: grid;
+            grid-template-columns: 50% 50%;
+            grid-template-rows: 20% 20% 20% 20% 20%;*/
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            left: 0;
+            top: 0;
+            font-size: 10vh;
+            transition: top .2s;
+            -webkit-transition: top .2s;
+
+            display: flex;
+            display: -webkit-flex;
+            flex-wrap: wrap;
+            -webkit-flex-wrap: wrap;
+        }
+
+        .count, .price, .product-image, .cart-sum-label, .cart-sum {
+            text-align: center;
+            display: flex;
+            display: -webkit-flex;
+            align-items: center;
+            -webkit-align-items: center;
+            justify-content: center;
+            -webkit-justify-content: center;
+
+            width: 35%;
+        }
+
+        .product-image-container {
+            width: 30%;
+            position: relative;
+        }
+
+        .product-image {
+            background-size: contain;
+            -webkit-background-size: contain;
+            position: absolute;
+            margin: 10%;
+            height: 80%;
+            width: 80%;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .product-image-1 {
+            background-image: url('candle03.jpg');
+        }
+
+        .product-image-2 {
+            background-image: url('candle02.jpg');
+        }
+
+        .product-image-3 {
+            background-image: url('candle01.jpg');
+        }
+
+        .product-image-4 {
+            background-image: url('candle04.jpg');
+        }
+
+        #cart.final {
+            top: -80%;
+        }
+
+        #cart.hidden {
+            top: -100%;
+        }
+
+        #receive-products {
+            display: flex;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            font-size: 10vh;
+            align-items: center;
+            justify-content: center;
+            transition: top .2s;
+            -webkit-transition: top .2s;
+            text-align: center;
+        }
+
+        #receive-products.active {
+            top: 0;
+        }
+
+        #payment {
+            display: flex;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            height: 80%;
+            width: 100%;
+            font-size: 10vh;
+            align-items: center;
+            justify-content: center;
+            transition: top .2s;
+            -webkit-transition: top .2s;
+            text-align: center;
+        }
+
+        #payment.active {
+            top: 20%;
+        }
+    </style>
+</head>
+<body>
+    <div id="cart"></div>
+    <div id="payment"><span>Please make a payment</span></div>
+    <div id="receive-products"><span>Take your candles</span></div>
+
+    <script>
+        var socket = io();
+
+        var prices = [0.15, 1.21, 3.59, 0.38];
+
+        var confirmCount = 0;
+        var lastState = '0,0,0,0,0';
+        var confirmedState = '0,0,0,0,0';
+
+        render(confirmedState);
+
+        socket.on('cart state', function (state){
+            console.log('state: ' + state);
+
+            render(state);
+        });
+        fetch('/state')
+            .then(function (response) {
+                return response.text();
+            })
+            .then(function (cartState) {
+                render(cartState);
+            });
+
+        function render(cartState) {
+            var counts = cartState.split(',');
+
+            var elCart = document.getElementById('cart');
+            var elPayment = document.getElementById('payment');
+            var elReceive = document.getElementById('receive-products');
+            var cartHTML = '';
+            var sum = 0;
+
+            var prevConfirmCount = confirmCount;
+
+            confirmCount = parseInt(counts[4] || 0, 10);
+
+            if (prevConfirmCount === 0 && confirmCount === 1) {
+                confirmedState = lastState;
+                elCart.classList.add('final');
+                elCart.classList.remove('hidden');
+                elPayment.classList.add('active');
+                elReceive.classList.remove('active');
+            } else if (confirmCount > 1) {
+                fetch('/finish')
+                    .then(function (response) {
+                        return response.text();
+                    })
+                    .then(function () {
+                        elCart.classList.remove('final');
+                        elCart.classList.add('hidden');
+                        elPayment.classList.remove('active');
+                        elReceive.classList.add('active');
+
+                        setTimeout(function () {
+                            elCart.classList.remove('final');
+                            elCart.classList.remove('hidden');
+                            elPayment.classList.remove('active');
+                            elReceive.classList.remove('active');
+                            confirmCount = 0;
+                        }, 5000);
+                    });
+            }
+
+            lastState = cartState;
+
+            if (confirmCount === 1) {
+                counts = confirmedState.split(',');
+            }
+
+            counts.forEach(function (count, index) {
+                if (index < 4) {
+                    cartHTML += `<div class="count"><span>${count + 'x'}</span></div>` +
+                        `<div class="price"><span>${'€' + prices[index].toFixed(2)}</span></div>` +
+                        `<div class="product-image-container"><div class="product-image product-image-${index + 1}"></div></div>`;
+
+                    sum += parseInt(count, 10) * prices[index];
+                }
+            });
+
+            cartHTML += `<div class="cart-sum-label"><span>Total:</span></div>`;
+            cartHTML += `<div class="cart-sum"><span>${'€' + sum.toFixed(2)}</span></div>`;
+
+            elCart.innerHTML = cartHTML;
+
+        }
+    </script>
+</body>
+</html>
