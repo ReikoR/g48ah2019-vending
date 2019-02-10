@@ -21,9 +21,8 @@ unsigned long lastConnectionTime = 0;            // last time you connected to t
 const unsigned long postingInterval = 10L * 1000L; // delay between updates, in milliseconds
 
 int counter = 0;
-int cartCounts[4] = {0, 0, 0, 0};
-int countChanged = 0;
-int shouldConfirm = 0;
+int cartCounts[5] = {0, 0, 0, 0, 0};
+int isCountsChanged = 0;
 
 #define NUM_BUTTONS 9
 const uint8_t BUTTON_PINS[NUM_BUTTONS] = {0, 1, 4, 5, 6, 7, 8, 9, A1};
@@ -82,25 +81,33 @@ void loop() {
     
     if (buttons[i].fell()) {
       if (i < 4) {
-        cartCounts[i] += 1;
-        countChanged = 1;
+        if (cartCounts[4] == 0) {
+          cartCounts[i] += 1;
+          isCountsChanged = 1;
+        }
       } else if (i < 8) {
         if (cartCounts[i - 4] > 0) {
-          cartCounts[i - 4] -= 1;
-          countChanged = 1;
+          if (cartCounts[4] == 0) {
+            cartCounts[i - 4] -= 1;
+            isCountsChanged = 1;
+          }
         }
       } else {
-        shouldConfirm = 1;
+        isCountsChanged = 1;
+
+        if (cartCounts[4] < 2) {
+          cartCounts[4]++;
+        } else {
+          zeroCartCounts();
+          cartCounts[4] = 0;
+        }
       }
     }
   }
 
-  if (countChanged) {
-    countChanged = 0;
+  if (isCountsChanged) {
+    isCountsChanged = 0;
     sendCartState();
-  } else if (shouldConfirm) {
-    shouldConfirm = 0;
-    sendConfirm();
   }
 }
 
@@ -167,8 +174,6 @@ void sendConfirm() {
 
     // note the time that the connection was made:
     lastConnectionTime = millis();
-
-    zeroCartCounts();
   } else {
     // if you couldn't make a connection:
     Serial.println("connection failed");
@@ -176,8 +181,9 @@ void sendConfirm() {
 }
 
 void zeroCartCounts() {
+  Serial.println("Clearing counts");
   memset(cartCounts, 0, sizeof cartCounts);
-  countChanged = 1;
+  isCountsChanged = 1;
 }
 
 void printWifiStatus() {

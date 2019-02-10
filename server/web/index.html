@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <script src="fetch.umd.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
@@ -10,30 +11,42 @@
             box-sizing: border-box;
         }
 
-        body {
+        html, body {
             padding: 0;
             margin: 0;
             font-family: sans-serif;
             overflow: hidden;
+            height: 100%;
+            width: 100%;
         }
 
         #cart {
-            /*display: grid;
-            grid-template-columns: 50% 50%;
-            grid-template-rows: 20% 20% 20% 20% 20%;*/
             position: absolute;
             height: 100%;
             width: 100%;
             left: 0;
             top: 0;
             font-size: 10vh;
-            transition: top .2s;
-            -webkit-transition: top .2s;
+            transition: transform .2s;
+            -webkit-transition: transform .2s;
 
             display: flex;
             display: -webkit-flex;
             flex-wrap: wrap;
             -webkit-flex-wrap: wrap;
+
+            transform: translateY(0);
+            -webkit-transform: translateY(0);
+        }
+
+        #cart.final {
+            transform: translateY(-80%);
+            -webkit-transform: translateY(-80%);
+        }
+
+        #cart.hidden {
+            transform: translateY(-100%);
+            -webkit-transform: translateY(-100%);
         }
 
         .count, .price, .product-image, .cart-sum-label, .cart-sum {
@@ -80,50 +93,48 @@
             background-image: url('candle04.jpg');
         }
 
-        #cart.final {
-            top: -80%;
-        }
-
-        #cart.hidden {
-            top: -100%;
-        }
-
         #receive-products {
             display: flex;
             position: absolute;
-            top: 100%;
+            top: 0;
             left: 0;
             height: 100%;
             width: 100%;
             font-size: 10vh;
             align-items: center;
             justify-content: center;
-            transition: top .2s;
-            -webkit-transition: top .2s;
+            transition: transform .2s;
+            -webkit-transition: transform .2s;
             text-align: center;
+            transform: translateY(100%);
+            -webkit-transform: translateY(100%);
         }
 
         #receive-products.active {
-            top: 0;
+            transform: translateY(0);
+            -webkit-transform: translateY(0);
         }
 
         #payment {
             display: flex;
             position: absolute;
-            top: 100%;
+            top: 0;
             left: 0;
             height: 80%;
             width: 100%;
             font-size: 10vh;
             align-items: center;
             justify-content: center;
-            transition: top .2s;
-            -webkit-transition: top .2s;
+            transition: transform .2s;
+            -webkit-transition: transform .2s;
             text-align: center;
+            transform: translateY(100%);
+            -webkit-transform: translateY(100%);
         }
 
         #payment.active {
-            top: 20%;
+            transform: translateY(20%);
+            -webkit-transform: translateY(20%);
         }
     </style>
 </head>
@@ -137,17 +148,16 @@
 
         var prices = [0.15, 1.21, 3.59, 0.38];
 
-        var confirmCount = 0;
         var lastState = '0,0,0,0,0';
-        var confirmedState = '0,0,0,0,0';
 
-        render(confirmedState);
+        render(lastState);
 
         socket.on('cart state', function (state){
             console.log('state: ' + state);
 
             render(state);
         });
+
         fetch('/state')
             .then(function (response) {
                 return response.text();
@@ -164,43 +174,26 @@
             var elReceive = document.getElementById('receive-products');
             var cartHTML = '';
             var sum = 0;
+            var confirmCount = parseInt(counts[4] || 0, 10);
 
-            var prevConfirmCount = confirmCount;
-
-            confirmCount = parseInt(counts[4] || 0, 10);
-
-            if (prevConfirmCount === 0 && confirmCount === 1) {
-                confirmedState = lastState;
+            if (confirmCount === 1) {
                 elCart.classList.add('final');
                 elCart.classList.remove('hidden');
                 elPayment.classList.add('active');
                 elReceive.classList.remove('active');
             } else if (confirmCount > 1) {
-                fetch('/finish')
-                    .then(function (response) {
-                        return response.text();
-                    })
-                    .then(function () {
-                        elCart.classList.remove('final');
-                        elCart.classList.add('hidden');
-                        elPayment.classList.remove('active');
-                        elReceive.classList.add('active');
-
-                        setTimeout(function () {
-                            elCart.classList.remove('final');
-                            elCart.classList.remove('hidden');
-                            elPayment.classList.remove('active');
-                            elReceive.classList.remove('active');
-                            confirmCount = 0;
-                        }, 5000);
-                    });
+                elCart.classList.remove('final');
+                elCart.classList.add('hidden');
+                elPayment.classList.remove('active');
+                elReceive.classList.add('active');
+            } else {
+                elCart.classList.remove('final');
+                elCart.classList.remove('hidden');
+                elPayment.classList.remove('active');
+                elReceive.classList.remove('active');
             }
 
             lastState = cartState;
-
-            if (confirmCount === 1) {
-                counts = confirmedState.split(',');
-            }
 
             counts.forEach(function (count, index) {
                 if (index < 4) {

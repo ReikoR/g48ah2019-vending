@@ -10,41 +10,22 @@ app.use(bodyParser.text());
 
 app.use(express.static('web'));
 
-let state = '0,0,0,0';
-let confirmCount = 0;
-
-function getState() {
-    return state + ',' + confirmCount;
-}
+let state = '0,0,0,0,0';
 
 io.on('connection', function(socket){
     console.log('a user connected');
 });
 
 app.get('/state', (req, res) => {
-    res.send(getState());
-});
-
-app.get('/confirm', (req, res) => {
-    console.log('Confirm');
-    confirmCount++;
-    res.sendStatus(200);
-
-    io.sockets.emit('cart state', getState());
+    res.send(state);
 });
 
 app.post('/state', (req, res) => {
     state = req.body;
-    console.log(getState());
+    console.log(state);
     res.sendStatus(200);
 
-    io.sockets.emit('cart state', getState());
-});
-
-app.get('/finish', (req, res) => {
-    console.log('Finish');
-    confirmCount = 0;
-    res.sendStatus(200);
+    io.sockets.emit('cart state', state);
 });
 
 http.listen(port, () => console.log(`Listening on port ${port}!`));
