@@ -1,2 +1,3 @@
 server/node_modules/
 server/.idea/
+arduino/vending_firmware/arduino_secrets.h

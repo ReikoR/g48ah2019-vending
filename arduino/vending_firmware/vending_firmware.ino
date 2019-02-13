@@ -23,9 +23,18 @@ const unsigned long postingInterval = 10L * 1000L; // delay between updates, in 
 int counter = 0;
 int cartCounts[5] = {0, 0, 0, 0, 0};
 int isCountsChanged = 0;
+//11 = 00, 16 = 03, 22 = 11, 33 = 22
+int productNumbers[4] = {0, 3, 11, 22};
+int productDelays[4] = {30, 24, 22, 21}; //seconds
+//int productDelays[4] = {27, 21, 19, 18};
+int shouldPressNumbers = 0;
+unsigned long readyToPressTime;
 
 #define NUM_BUTTONS 9
 const uint8_t BUTTON_PINS[NUM_BUTTONS] = {0, 1, 4, 5, 6, 7, 8, 9, A1};
+
+#define NUM_OUTPUT_BUTTONS 5
+const uint8_t OUTPUT_BUTTON_PINS[NUM_OUTPUT_BUTTONS] = {10, 11, 12, 13, 14};
 
 Bounce * buttons = new Bounce[NUM_BUTTONS];
 
@@ -33,6 +42,10 @@ void setup() {
   for (int i = 0; i < NUM_BUTTONS; i++) {
     buttons[i].attach(BUTTON_PINS[i], INPUT_PULLUP);
     buttons[i].interval(25);
+  }
+
+  for (int i = 0; i < NUM_OUTPUT_BUTTONS; i++) {
+    pinMode(OUTPUT_BUTTON_PINS[i], OUTPUT);   
   }
   
   //Initialize serial and wait for port to open:
@@ -101,14 +114,88 @@ void loop() {
           zeroCartCounts();
           cartCounts[4] = 0;
         }
+
+        if (cartCounts[4] == 2) {
+          shouldPressNumbers = 1;
+          readyToPressTime = millis();
+        }
       }
     }
   }
+
+  /*for (int i = 0; i < NUM_OUTPUT_BUTTONS; i++) {
+    if (cartCounts[4] == 1) {
+      digitalWrite(OUTPUT_BUTTON_PINS[i], HIGH);
+    } else {
+      digitalWrite(OUTPUT_BUTTON_PINS[i], LOW);
+    }    
+  }*/
 
   if (isCountsChanged) {
     isCountsChanged = 0;
     sendCartState();
   }
+
+  if (shouldPressNumbers && (millis() - readyToPressTime > 500)) {
+    shouldPressNumbers = 0;
+    pressNumbersForCart();
+
+    zeroCartCounts();
+    cartCounts[4] = 0;
+    sendCartState();
+  }
+
+  /*if (millis() - readyToPressTime > 1000) {
+    readyToPressTime = millis();
+    cartCounts[0] = 1;
+    pressNumbersForCart();
+  }*/
+
+  /*digitalWrite(10, HIGH);
+  delay(500);
+  digitalWrite(10, LOW);
+  delay(500);*/
+}
+
+void pressNumbersForCart() {
+  Serial.println("Press numbers");
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < cartCounts[i]; j++) {
+      Serial.print("i: ");
+      Serial.println(i);
+      Serial.print("j: ");
+      Serial.println(j);
+      pressNumbers(productNumbers[i]);
+      delay(productDelays[i] * 1000);
+      pressNumber(4);
+      delay(2000);
+    }
+  }
+}
+
+void pressNumbers(int productNumber) {
+  int firstDigit = productNumber / 10;
+  int secondDigit = productNumber % 10;
+
+  Serial.print("firstDigit: ");
+  Serial.println(firstDigit);
+  Serial.print("secondDigit: ");
+  Serial.println(secondDigit);
+  
+  digitalWrite(OUTPUT_BUTTON_PINS[firstDigit], HIGH);
+  delay(500);
+  digitalWrite(OUTPUT_BUTTON_PINS[firstDigit], LOW);
+  delay(1000);
+  digitalWrite(OUTPUT_BUTTON_PINS[secondDigit], HIGH);
+  delay(500);
+  digitalWrite(OUTPUT_BUTTON_PINS[secondDigit], LOW);
+}
+
+void pressNumber(int index) {
+  digitalWrite(OUTPUT_BUTTON_PINS[index], HIGH);
+  delay(100);
+  digitalWrite(OUTPUT_BUTTON_PINS[index], LOW);
+  delay(100);
 }
 
 void sendCartState() {
